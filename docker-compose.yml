@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  telegram-bot:
+    build: ./telegram-bot
+    container_name: telegram-bot
+    restart: unless-stopped
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - API_GATEWAY_URL=${API_GATEWAY_URL}
+    volumes:
+      - ./telegram-bot/bot.db:/app/bot.db
+      - ./config/.env:/app/.env
+    # Agrega esto para asegurar permisos correctos
+    user: "node"
+    working_dir: /app

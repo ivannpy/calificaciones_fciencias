@@ -1,0 +1,15 @@
+{
+  "name": "notion-service",
+  "version": "1.0.0",
+  "description": "Servicio para validar datos en Notion",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "@notionhq/client": "^2.2.3",
+    "dotenv": "^16.3.1"
+  },
+  "private": true
+}
