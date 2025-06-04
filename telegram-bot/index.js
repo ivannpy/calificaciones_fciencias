@@ -200,4 +200,65 @@ bot.onText(/\/consultar(?: (.+))?/, async (msg, match) => {
 });
 
 
+bot.onText(/\/final(?: (.+))?/, async (msg, match) => {
+    const chatId = msg.chat.id;
+
+    try {
+        if (!match[1]) {
+            return await bot.sendMessage(
+                chatId,
+                '❌ *Falta tu número de cuenta.*\n\nFormato requerido:\n/final [número]\n\n📝 Ejemplo: `/final 321176898`',
+                {parse_mode: 'Markdown'}
+            );
+        }
+
+        const accountNumber = match[1].trim();
+        if (!isValidAccountNumber(accountNumber)) {
+            return await bot.sendMessage(
+                chatId,
+                '❌ *Formato inválido*\n\nEl número debe:\n- Tener 8-10 dígitos\n- Solo números\n\n📝 Ejemplo: `/final 321176898`',
+                {parse_mode: 'Markdown'}
+            );
+        }
+
+        console.log(`El chat ${chatId} solicitó la calificación de ${accountNumber}`);
+
+
+        const usage = await checkUsageLimit(chatId);
+        if (!usage.allowed) {
+            return await bot.sendMessage(
+                chatId,
+                '❌ *Límite diario alcanzado*\n\nSolo puedes realizar 2 consultas por día.\n\nVuelve mañana.',
+                {parse_mode: 'Markdown'}
+            );
+        }
+
+        const apiResponse = await axios.post(
+            `${process.env.API_GATEWAY_URL}/final`,
+            {accountNumber}
+        );
+
+
+        await bot.sendMessage(
+            chatId,
+            `✅ ${apiResponse.data.message}\n\n\nConsultas restantes hoy: ${usage.remaining}`,
+            {parse_mode: 'Markdown'}
+        );
+
+
+    } catch (error) {
+        let errorMessage = '⚠️ Error al procesar tu solicitud. Intenta más tarde.';
+
+        if (error.response) {
+            if (error.response.status === 404 || error.response.status === 400) {
+                errorMessage = `⚠️ ${error.response.data.error}`;
+            }
+        }
+
+        await bot.sendMessage(chatId, errorMessage);
+        console.error('Error en /final:', error);
+    }
+});
+
+
 console.log('Bot en funcionamiento...');

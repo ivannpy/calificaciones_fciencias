@@ -1,4 +1,4 @@
-require('dotenv').config({ path: '../config/.env' });
+require('dotenv').config({path: '../config/.env'});
 
 const express = require('express');
 const axios = require('axios');
@@ -19,26 +19,35 @@ function printDetalle(evaluacion, data, n) {
     return mensaje;
 }
 
+
 app.post('/consultar', async (req, res) => {
     try {
-        const { accountNumber } = req.body;
-        if (!accountNumber) return res.status(400).json({ error: 'Falta número de cuenta' });
+        const {accountNumber} = req.body;
+        if (!accountNumber) return res.status(400).json({error: 'Falta número de cuenta'});
 
-        const { status, data } = await axios.get(`${process.env.NOTION_SERVICE_URL}/valida_en_lista`, {
-            params: { accountNumber },
+        const {status, data} = await axios.get(`${process.env.NOTION_SERVICE_URL}/valida_en_lista`, {
+            params: {accountNumber},
             validateStatus: null
         });
 
         if (status === 404 || status === 400) return res.status(status).json(data);
 
-        const { status: status2, data: data2} = await axios.get(`${process.env.NOTION_SERVICE_URL}/calificaciones`, {
-            params: { accountNumber },
+        const {status: status2, data: data2} = await axios.get(`${process.env.NOTION_SERVICE_URL}/calificaciones`, {
+            params: {accountNumber},
             validateStatus: null
         });
 
         if (status2 === 404) return res.status(status2).json(data2);
 
-        let mensaje = `El o la alumna con número de cuenta ${accountNumber} tiene las siguientes calificaciones:\n`;
+        let mensaje;
+
+        if (data2.finalPrimera != null) {
+            mensaje = `Calificación examen final primera vuelta: ${data2.finalPrimera}`;
+            res.json({message: mensaje});
+            return;
+        }
+
+        mensaje = `El o la alumna con número de cuenta ${accountNumber} tiene las siguientes calificaciones:\n`;
 
         mensaje += `\nPromedio exámenes semanales: ${data2.semanales != null ? data2.semanales.toFixed(2) : 0}\n`;
         mensaje += printDetalle("Semanal", data2.detalleSemanales, 10);
@@ -79,9 +88,9 @@ app.post('/consultar', async (req, res) => {
             let emoji;
             if (9.00 <= final) {
                 emoji = `⭐`;
-            } else if ( 8.00 <= final < 9.00 ) {
+            } else if (8.00 <= final < 9.00) {
                 emoji = `👍`;
-            } else if ( 7.00 <= final < 8.00 ) {
+            } else if (7.00 <= final < 8.00) {
                 emoji = `😬`;
             } else {
                 emoji = `🤥`;
@@ -90,12 +99,38 @@ app.post('/consultar', async (req, res) => {
             mensaje += `\n\n${emoji} Calificación final: ${final}\n`;
         }
 
-        res.json({ message: mensaje });
+        res.json({message: mensaje});
 
     } catch (error) {
         const message = error.response?.data?.error || 'Error interno';
-        res.status(error.response?.status || 500).json({ error: message });
+        res.status(error.response?.status || 500).json({error: message});
     }
 });
+
+app.post('/final', async (req, res) => {
+    let mensaje;
+    try {
+        const {accountNumber} = req.body;
+        if (!accountNumber) return res.status(400).json({error: 'Falta número de cuenta'});
+
+        const {status, data} = await axios.get(`${process.env.NOTION_SERVICE_URL}/calificacionfinal`, {
+            params: {accountNumber},
+            validateStatus: null
+        });
+
+        if (status === 404 || status === 400) return res.status(status).json(data);
+
+
+        mensaje = `Tu calificación final del curso es ${data.final}`;
+        mensaje += `\n\nSi tienes dudas o comentarios respecto a esta, comunícate en breve.`;
+
+        res.json({message: mensaje});
+
+    } catch (error) {
+        const message = error.response?.data?.error || 'Error interno';
+        res.status(error.response?.status || 500).json({error: message});
+    }
+});
+
 
 app.listen(3000, () => console.log('API Gateway running on port 3000'));
